@@ -20,7 +20,7 @@ int main()
     omp_set_num_threads(noOfThreads);
     double start_time = omp_get_wtime();
 
-#pragma omp parallel for reduction(+ : indexCount)
+// #pragma omp parallel for reduction(+ : indexCount)
     for (tempValue = 2; tempValue <= valueN; tempValue++)
     {
         if (IsPrime(tempValue))

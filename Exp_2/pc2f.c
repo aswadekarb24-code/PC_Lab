@@ -2,19 +2,19 @@
 #include <omp.h>
 int main()
 {
-    int num_steps = 1000000000, i;
+    int num_steps = 10000000, i;
     double aux, pi, step = 1.0 / (double)num_steps, x = 0.0, sum = 0.0;
     double start_time = omp_get_wtime();
-
-// #pragma omp parallel private(i, x, aux) shared(sum)
+    omp_set_num_threads(8); // Set the number of threads to 16
+#pragma omp parallel private(i, x, aux) shared(sum)
     {
-// #pragma omp for schedule(static)
+#pragma omp for schedule(static)
         for (i = 0; i < num_steps; i = i + 1)
         {
 
             x = (i + 0.5) * step;
             aux = 4.0 / (1.0 + x * x);
-// #pragma omp critical
+#pragma omp critical
             sum = sum + aux;
         }
     }

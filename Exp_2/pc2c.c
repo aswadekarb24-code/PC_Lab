@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     // MULTIPLICATION & BENCHMARKING
     // ==========================================
     double start_time = omp_get_wtime();
-
+    omp_set_num_threads(16); // Set the number of threads to 4
     #pragma omp parallel private(i, j, k) shared(matrixA, matrixB, matrixC)
     {
         #pragma omp for schedule(static)

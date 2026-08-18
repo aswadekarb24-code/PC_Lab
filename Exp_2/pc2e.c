@@ -5,7 +5,7 @@
 int main()
 {
     srand(time(NULL));
-    int numberOfElements, currentMax = -1, iIterator, arrayInput[100000];
+    int numberOfElements, currentMax = -1, iIterator, arrayInput[1000000];
     printf("Enter the Number of Elements: ");
     scanf("%d", &numberOfElements);
     for (iIterator = 0; iIterator < numberOfElements; iIterator++)
@@ -14,7 +14,7 @@ int main()
         else arrayInput[iIterator] = rand() % numberOfElements;
     }
     double start_time = omp_get_wtime();
-
+    omp_set_num_threads(16); // Set the number of threads to 16
 #pragma omp parallel for shared(currentMax)
     for (iIterator = 0; iIterator < numberOfElements; iIterator++)
     {
