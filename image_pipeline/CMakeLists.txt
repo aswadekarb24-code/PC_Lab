@@ -10,12 +10,12 @@ find_package(OpenMP REQUIRED)
 find_package(CUDAToolkit REQUIRED)
 
 # Add CUDA source file
-add_executable(pipeline_week3 src/main.cpp src/kernels.cu)
+add_executable(pipeline_final src/main.cpp src/kernels.cu)
 
-target_link_libraries(pipeline_week3 PRIVATE 
+target_link_libraries(pipeline_final PRIVATE 
     ${OpenCV_LIBS} 
     OpenMP::OpenMP_CXX
     CUDA::cudart
 )
 
-target_include_directories(pipeline_week3 PRIVATE ${OpenCV_INCLUDE_DIRS} ${CUDAToolkit_INCLUDE_DIRS})
+target_include_directories(pipeline_final PRIVATE ${OpenCV_INCLUDE_DIRS} ${CUDAToolkit_INCLUDE_DIRS})
