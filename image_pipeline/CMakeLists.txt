@@ -3,22 +3,19 @@ project(ImagePipeline LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
 
-# Find OpenCV
 find_package(OpenCV REQUIRED)
-
-# Find OpenMP
 find_package(OpenMP REQUIRED)
-
-# Find CUDA
 find_package(CUDAToolkit REQUIRED)
 
-add_executable(pipeline_week1 src/main.cpp)
+# Add CUDA source file
+add_executable(pipeline_week3 src/main.cpp src/kernels.cu)
 
-target_link_libraries(pipeline_week1 PRIVATE 
+target_link_libraries(pipeline_week3 PRIVATE 
     ${OpenCV_LIBS} 
     OpenMP::OpenMP_CXX
     CUDA::cudart
 )
 
-target_include_directories(pipeline_week1 PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_include_directories(pipeline_week3 PRIVATE ${OpenCV_INCLUDE_DIRS} ${CUDAToolkit_INCLUDE_DIRS})
