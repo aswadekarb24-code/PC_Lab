@@ -1,0 +1,408 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,backgrounds}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+% colour-blind safe palette (Okabe--Ito), shared with the plots
+\definecolor{cBlue}{HTML}{0072B2}
+\definecolor{cOrange}{HTML}{D55E00}
+\definecolor{cGreen}{HTML}{009E73}
+\definecolor{cGrey}{HTML}{6B6B6B}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{cBlue}\bfseries,
+  commentstyle=\color{cGrey}\itshape,
+  numbers=left, numberstyle=\tiny\color{cGrey}, numbersep=4pt,
+  frame=single, rulecolor=\color{cGrey!50}, xleftmargin=8pt, framexleftmargin=8pt,
+  breaklines=true, showstringspaces=false, columns=fullflexible, language=C++,
+  morekeywords={__global__,__restrict__}
+}
+
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+
+\begin{document}
+
+\title{Serial versus OpenMP/CUDA Parallel Synthesis of Similarity-Ordered Photo Transition Videos}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Awwab Wadekar}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering and Information Technology} \\
+\textit{Veermata Jijabai Technological Institute (VJTI)}\\
+Mumbai, India \\
+aswadekar\_b24@it.vjti.ac.in}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Taha Valiji}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering and Information Technology} \\
+\textit{Veermata Jijabai Technological Institute (VJTI)}\\
+Mumbai, India \\
+tmvaliji\_b24@it.vjti.ac.in}
+\and
+\IEEEauthorblockN{Mentor: Dr. Sandip Tukaram Shingade}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering and Information Technology} \\
+\textit{Veermata Jijabai Technological Institute (VJTI)}\\
+Mumbai, India \\
+stshingade@it.vjti.ac.in}
+}
+
+\maketitle
+
+\begin{abstract}
+Turning an unordered folder of photographs into a smooth slideshow video requires three costly steps: extracting a descriptor from every image, arranging the images so that neighbours look alike, and synthesising and encoding many intermediate transition frames. We present a complete pipeline for this task and implement it twice from the same source: a single-threaded CPU version and a parallel version that uses OpenMP for feature extraction and similarity computation and CUDA for frame blending. Images are described by 3-D HSV colour histograms, compared with histogram correlation, ordered by a greedy nearest-neighbour tour, and joined by cross-dissolve frames. We benchmark both versions on five class-balanced subsets (100--1000 images) of a public landscape dataset, at four output resolutions (up to $1920\times1080$) and three transition lengths, giving 120 timed runs on a 16-thread CPU with an RTX~4050 GPU. The parallel stages are substantially faster: feature extraction by $5.7\times$ on average (up to $10.0\times$) and similarity computation and ordering by $7.5\times$ (up to $8.9\times$). The end-to-end speedup, however, is only $1.04$--$1.13\times$ (mean $1.11\times$), because writing the video through a sequential software encoder accounts for $91$--$99\%$ of the serial run time. We quantify this Amdahl-type limit and identify encoder-side parallelism as the necessary next step.
+\end{abstract}
+
+\begin{IEEEkeywords}
+parallel computing, OpenMP, CUDA, image similarity, colour histograms, video generation, frame interpolation, speedup analysis
+\end{IEEEkeywords}
+
+%=====================================================================
+\section{Introduction}
+Personal and online photo collections are large and usually unordered. Presenting them as a video, where each photograph dissolves smoothly into the next, is a common request, but it is computationally heavy: every image must be decoded and analysed, every pair of images compared in order to choose a pleasing sequence, and tens of thousands of transition frames rendered and compressed. The work is also naturally parallel in most of its stages, which makes it a good case study for comparing a serial implementation with a CPU--GPU parallel one.
+
+Our design draws on three lines of earlier work. Snavely \emph{et al.}\ presented a system for browsing large, unstructured photo collections that uses image-based rendering to \emph{smoothly transition between photographs} \cite{snavely2006}; we adopt this setting of turning an unordered photo set into a continuous visual sequence. Niklaus \emph{et al.}\ cast video frame interpolation as a (separable) convolution applied to a pair of input frames, and note that per-pixel 2-D kernels become very memory-hungry at 1080p (26\,GB for $41\times41$ kernels), which motivates their separable, whole-frame formulation \cite{niklaus2017}. Fan \emph{et al.}\ (Co-ViA) observed that in learned interpolation one stage---optical-flow estimation, over $60\%$ of run time in the baseline they analyse---dominates, and obtained large gains only by restructuring the pipeline around that bottleneck \cite{fan2024}. We use the first as the application setting, the second as the interpolation viewpoint (in its simplest, learning-free form: a per-pixel blend of two frames), and the third as the methodological lesson that the benefit of accelerating any stage is bounded by the share of the stages that remain unchanged.
+
+\textbf{Contributions.} (i) A complete, reproducible serial and a parallel (OpenMP\,+\,CUDA) implementation of an image-to-video transition pipeline sharing identical algorithms and parameters; (ii) a command-line and JSON-driven benchmarking harness that sweeps datasets, resolutions and transition lengths and records per-stage timings; (iii) a 120-run measurement study with a stage-level analysis explaining why large stage speedups translate into a modest end-to-end gain.
+
+\textbf{Organisation.} Section~II states the problem. Section~III describes the approach and algorithms, Section~IV their implementation, and Section~V the datasets and experimental procedure. Results are reported in Section~VI and analysed in Section~VII; Section~VIII concludes.
+
+%=====================================================================
+\section{Problem Statement}
+Given a directory of $N$ images $\mathcal{I}=\{I_1,\dots,I_N\}$ of arbitrary sizes, an output resolution $W\times H$ and a number $F\ge 0$ of intermediate frames per image pair, produce a single video that (a) shows every image exactly once, (b) orders the images so that consecutive images are as visually similar as possible, and (c) inserts $F$ synthesised frames between consecutive images so that one image fades into the next. The video contains
+\begin{equation}
+  T = (N-1)(F+1) + 1
+  \label{eq:frames}
+\end{equation}
+frames. We want to know:
+\begin{enumerate}
+  \item How much faster can each stage be made by CPU multithreading (OpenMP) and GPU offload (CUDA) compared with an equivalent single-threaded implementation?
+  \item How do the speedups depend on the dataset size $N$, the resolution $W\times H$, and the transition length $F$?
+  \item Which stage limits the end-to-end speedup, and by how much?
+\end{enumerate}
+Ordering the images optimally is a travelling-salesman-type problem; we do not seek the optimum but a cheap, deterministic heuristic that is identical in both implementations, so that the comparison isolates the effect of parallelisation.
+
+%=====================================================================
+\section{Approach and Algorithms}
+
+\subsection{Pipeline overview}
+The pipeline (Fig.~\ref{fig:pipeline}) has five stages. Stages~1 and~2 are data-parallel across images and image pairs; Stage~3 is a short sequential scan; Stage~4 is data-parallel across pixels; Stage~5 is a sequential stream into the video encoder.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=4mm and 4.5mm,
+  blk/.style={draw, rounded corners=2pt, minimum height=13mm, minimum width=23mm, align=center, font=\footnotesize, line width=0.6pt},
+  par/.style={blk, fill=cBlue!14, draw=cBlue},
+  gpu/.style={blk, fill=cGreen!16, draw=cGreen},
+  seq/.style={blk, fill=cOrange!14, draw=cOrange},
+  io/.style={blk, fill=black!5, draw=cGrey, minimum width=15mm},
+  tag/.style={font=\scriptsize\itshape, text=cGrey},
+  arr/.style={-{Stealth[length=2mm]}, line width=0.6pt, draw=cGrey}
+]
+\node[io] (in) {Image\\folder\\($N$ files)};
+\node[par, right=of in] (s1) {\textbf{1. Features}\\decode, resize\\HSV histogram};
+\node[par, right=of s1] (s2) {\textbf{2. Similarity}\\$N\times N$ histogram\\correlation};
+\node[seq, right=of s2] (s3) {\textbf{3. Ordering}\\greedy nearest\\neighbour};
+\node[gpu, right=of s3] (s4) {\textbf{4. Blend}\\$I_t=(1-\alpha)A+\alpha B$\\per pixel};
+\node[seq, right=of s4] (s5) {\textbf{5. Encode}\\MPEG-4 writer\\(sequential)};
+\node[io, right=of s5] (out) {Video\\$T$ frames};
+\foreach \a/\b in {in/s1,s1/s2,s2/s3,s3/s4,s4/s5,s5/out} \draw[arr] (\a) -- (\b);
+\node[tag, below=1mm of s1] {OpenMP, over images};
+\node[tag, below=1mm of s2] {OpenMP, over rows $i$};
+\node[tag, below=1mm of s3] {serial, $O(N^2)$};
+\node[tag, below=1mm of s4] {CUDA (serial build: CPU loop)};
+\node[tag, below=1mm of s5] {serial in both builds};
+\end{tikzpicture}
+\caption{Pipeline stages and where parallelism is applied. Blue: parallelised on the CPU; green: parallelised on the GPU; orange: sequential in both builds. In the serial build every stage runs single-threaded on the CPU.}
+\label{fig:pipeline}
+\end{figure*}
+
+\subsection{Image descriptor: HSV colour histogram}
+Each image is resized to the output resolution $W\times H$ (bilinear interpolation) and converted from BGR to HSV, a colour space in which hue is separated from brightness and is therefore more stable under lighting change than raw RGB. A three-dimensional histogram with $16$ hue ($[0,180)$), $8$ saturation and $8$ value bins ($[0,256)$ each) is computed, giving a descriptor of $16\cdot 8\cdot 8=1024$ bins, which is then min--max normalised to $[0,1]$. Colour-histogram matching is a classical, inexpensive way of comparing images \cite{swain1991}; it is robust to small viewpoint changes, which suits photographs of the same scene type.
+
+\subsection{Pairwise similarity}
+For histograms $H_i, H_j$ with means $\bar H_i,\bar H_j$ over the $B=1024$ bins, similarity is the Pearson correlation
+\begin{equation}
+  s_{ij}=\frac{\sum_{b}(H_i(b)-\bar H_i)(H_j(b)-\bar H_j)}
+  {\sqrt{\sum_{b}(H_i(b)-\bar H_i)^2\;\sum_{b}(H_j(b)-\bar H_j)^2}},
+  \label{eq:corr}
+\end{equation}
+(OpenCV's \texttt{HISTCMP\_CORREL}). Because $s_{ij}=s_{ji}$, only the upper triangle is computed and mirrored: $N(N-1)/2$ comparisons of cost $O(B)$ each.
+
+\subsection{Ordering}
+The images are sequenced by the greedy nearest-neighbour rule of Algorithm~\ref{alg:order}: start at the first image, and repeatedly move to the not-yet-visited image with the highest correlation to the current one. It costs $O(N^2)$, is deterministic, and is identical in the serial and parallel builds. It gives no optimality guarantee, and we do not evaluate the visual quality of the resulting order.
+
+\begin{algorithm}[t]
+\caption{Greedy similarity ordering}
+\label{alg:order}
+\begin{algorithmic}[1]
+\Require similarity matrix $S\in\mathbb{R}^{N\times N}$
+\Ensure permutation $\pi$ of $\{1,\dots,N\}$
+\State $\pi \gets [1]$;\; $\textit{visited}[1]\gets \textbf{true}$;\; $c \gets 1$
+\For{$k=2$ \textbf{to} $N$}
+  \State $n \gets \arg\max_{j:\,\neg\textit{visited}[j]} S_{cj}$
+  \State append $n$ to $\pi$;\; $\textit{visited}[n]\gets\textbf{true}$;\; $c\gets n$
+\EndFor
+\State \Return $\pi$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Transition synthesis}
+For consecutive images $A=I_{\pi_k}$ and $B=I_{\pi_{k+1}}$ the $f$-th intermediate frame ($f=1,\dots,F$) is the cross-dissolve
+\begin{equation}
+  I_f(x,y,c)=\big\lfloor (1-\alpha_f)\,A(x,y,c)+\alpha_f\,B(x,y,c)\big\rfloor,
+  \label{eq:blend}
+\end{equation}
+with $\alpha_f=f/(F+1)$, for every pixel $(x,y)$ and channel $c$. This is the simplest instance of the ``combine two frames with a per-pixel weighting'' idea behind convolution-based interpolation \cite{niklaus2017}, with a constant, content-independent kernel and no motion estimation; it therefore handles the unrelated pairs in a photo collection (which have no meaningful motion) at a cost of two multiplies and one add per byte. Each pixel and channel is independent, which makes the stage embarrassingly parallel. Frames are written in order, $A$ first and the last image at the end, giving Eq.~\eqref{eq:frames} frames at $60$\,fps.
+
+\subsection{Parallelisation strategy}
+Table~\ref{tab:strategy} summarises how each stage is mapped. Stages~1 and~2 use \emph{data parallelism with dynamic scheduling}: image decode times differ, and the triangular loop in Stage~2 gives early rows more work than late rows. Stage~4 uses one GPU thread per pixel. Stage~5 cannot be parallelised across frames with the software encoder used here, because frames must be appended in order.
+
+\begin{table}[t]
+\caption{Mapping of stages to execution resources}
+\label{tab:strategy}
+\centering
+\footnotesize
+\begin{tabular}{@{}llll@{}}
+\toprule
+Stage & Work items & Serial build & Parallel build \\
+\midrule
+1 Features & $N$ images & loop & OpenMP, dynamic \\
+2 Similarity & $N(N{-}1)/2$ pairs & loop & OpenMP, dynamic \\
+3 Ordering & $N$ steps & loop & loop (same) \\
+4 Blend & $W{\cdot}H{\cdot}3$ bytes/frame & CPU loop & CUDA kernel \\
+5 Encode & $T$ frames & sequential & sequential \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=====================================================================
+\section{Implementation}
+
+\subsection{Code organisation and build}
+The code base is C++17 with CUDA. Both executables are built by one CMake project (Release configuration by default, so that timings reflect optimised code):
+\begin{itemize}
+  \item \texttt{pipeline\_parallel}: \texttt{main.cpp} + \texttt{kernels.cu}, linked against OpenCV, OpenMP and the CUDA runtime.
+  \item \texttt{pipeline\_serial}: \texttt{main\_serial.cpp}, linked against OpenCV only; it contains no OpenMP pragma and no CUDA call, so it is a genuine single-threaded baseline.
+\end{itemize}
+A shared header, \texttt{common.hpp}, contains everything that must be identical in both builds---argument parsing, image listing, the HSV histogram, and the greedy ordering of Algorithm~\ref{alg:order}---so differences in run time come only from how the stages are executed.
+
+\subsection{Command-line interface}
+Both programs take named, order-independent options: \texttt{--dataset}, \texttt{--width}/\texttt{--height} (accepted only together; default $1280\times720$), \texttt{--frames} (default $30$), \texttt{--output}, and \texttt{--metrics}, which writes the stage timings as JSON. Invalid values (non-positive sizes, only one of width/height, unknown or positional arguments) are rejected with exit code~2.
+
+\subsection{Parallel stages}
+Stage~1 is a single \texttt{\#pragma omp parallel for schedule(dynamic)} over the image list: each thread decodes, resizes and histograms its own images and writes only to its own slots of the pre-allocated arrays, so no locking is needed. Stage~2 uses the same pragma over the row index $i$ of the upper triangle, each iteration computing $s_{ij}$ for $j>i$ and writing both $S_{ij}$ and $S_{ji}$ (distinct elements, hence race-free). Images that fail to decode are dropped before Stage~2. The ordering (Stage~3) runs on one thread in both builds.
+
+\subsection{GPU blending}
+For each consecutive pair the two images are copied to the device once, and each of the $F$ intermediate frames is produced by a kernel launch followed by a device-to-host copy into a reusable frame buffer that is handed to the encoder. The kernel assigns one thread to one pixel (three bytes), with $256$ threads per block (Listing~\ref{lst:kernel}); the host wrapper synchronises after each launch.
+
+\begin{lstlisting}[caption={CUDA blend kernel (Eq.~\eqref{eq:blend}).},label={lst:kernel},float=t]
+__global__ void blendKernel(const unsigned char* __restrict__ A,
+                            const unsigned char* __restrict__ B,
+                            unsigned char* __restrict__ out,
+                            float alpha, int totalPixels) {
+  int idx = blockDim.x * blockIdx.x + threadIdx.x;
+  if (idx < totalPixels) {
+    int p = idx * 3;                      // B, G, R
+    float inv = 1.0f - alpha;
+    out[p+0] = (unsigned char)(A[p+0]*inv + B[p+0]*alpha);
+    out[p+1] = (unsigned char)(A[p+1]*inv + B[p+1]*alpha);
+    out[p+2] = (unsigned char)(A[p+2]*inv + B[p+2]*alpha);
+  }
+}
+\end{lstlisting}
+
+The serial build uses the same expression in a plain loop over the $W\cdot H\cdot 3$ bytes of the frame, with the same truncation.
+
+\subsection{Video encoding}
+Both builds stream frames directly into an OpenCV \texttt{VideoWriter} using the MPEG-4 Part~2 (\texttt{mp4v}) codec at $60$\,fps; no frame is stored beyond the one being encoded. The reported ``blend + encode'' time therefore covers blending (CPU or GPU, including host--device transfers), codec work and file output. All $N$ resized images are held in memory, which costs $N\cdot W\cdot H\cdot 3$ bytes (6.2\,GB for $N{=}1000$ at $1920\times1080$).
+
+\subsection{Benchmark driver}
+A Python driver (\texttt{run\_pipeline.py}) configures and builds the project with CMake, then reads a JSON file describing datasets, each with a path, an output path, a list of $(W,H)$ pairs and a list of $F$ values. For every dataset and every combination it runs the serial and then the parallel executable. The driver validates its input and \emph{reports but does not abort on} problems: a missing path, a dataset with fewer than $20$ images, or an invalid setting (e.g.\ a negative height) causes only that dataset or setting to be skipped. Every run's three stage times, total frames and wall time are appended immediately to a CSV file, so a long sweep survives interruptions. To limit disk usage the driver deletes each run's video after its timings are saved, keeping only the $1920\times1080$, $F{=}20$ video of each dataset.
+
+%=====================================================================
+\section{Dataset and Processing}
+
+\subsection{Source data}
+We use the public Kaggle dataset ``Landscape Recognition | Image Dataset (12k Images)'' \cite{kaggle_landscape}, a multi-class landscape classification set. Its training split has five classes---Coast, Desert, Forest, Glacier and Mountain---of $2000$ JPEG images each. The source images are small (for example $275\times183$ and $300\times168$), so every output resolution up-samples them; this affects image content but not the amount of computation per pixel, which is what we measure.
+
+\subsection{Subsets}
+A setup script samples, with a fixed random seed ($42$), an equal number of images from each class and copies them into flat folders, producing five datasets of $N=100, 200, 500, 750$ and $1000$ images (Table~\ref{tab:datasets}). Class balance ensures that the similarity structure is non-trivial: images of the same class tend to correlate more strongly than images of different classes.
+
+\begin{table}[t]
+\caption{Datasets and experimental grid}
+\label{tab:datasets}
+\centering
+\footnotesize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Dataset & Images $N$ & Per class & Pairs $N(N{-}1)/2$ \\
+\midrule
+\texttt{landscape\_100}  & 100  & 20  & 4{,}950 \\
+\texttt{landscape\_200}  & 200  & 40  & 19{,}900 \\
+\texttt{landscape\_500}  & 500  & 100 & 124{,}750 \\
+\texttt{landscape\_750}  & 750  & 150 & 280{,}875 \\
+\texttt{landscape\_1000} & 1000 & 200 & 499{,}500 \\
+\midrule
+\multicolumn{4}{@{}p{0.92\columnwidth}@{}}{Resolutions: $640{\times}360$, $1024{\times}768$, $1280{\times}720$, $1920{\times}1080$. Transition lengths $F\in\{10,20,30\}$. Modes: serial, parallel. Total: $5\times4\times3\times2=120$ runs.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experimental procedure and platform}
+Every dataset is run with every resolution and every $F$ in both modes (120 runs, all completed successfully). The driver is executed once, sequentially, so serial and parallel runs never compete for the machine. Timings are taken inside the executables with a monotonic clock and cover three stages: \emph{feature extraction} (Stage~1, including image decoding), \emph{similarity and ordering} (Stages~2--3), and \emph{blend + encode} (Stages~4--5); the \emph{pipeline time} is their sum and excludes process start-up and file listing. The platform is a laptop with an Intel Core i5-13450HX CPU ($10$ cores, $16$ hardware threads), $31$\,GB RAM, and an NVIDIA GeForce RTX~4050 Laptop GPU; software is Linux, GCC~16.2, OpenCV~5.0 \cite{bradski2000}, OpenMP \cite{dagum1998} with the default of $16$ threads, and CUDA~13.4 \cite{nickolls2008}.
+
+\subsection{Output consistency}
+In a preliminary check on a separate $233$-image folder at $640\times360$ with $F{=}2$, both builds produced videos with the same number of frames ($697$, as predicted by Eq.~\eqref{eq:frames}); after lossy MPEG-4 encoding, decoded frames differed by a mean absolute value of $0.52$ intensity levels (out of $255$; largest per-frame mean $1.41$). We therefore regard the two outputs as visually equivalent, and did not otherwise evaluate image quality.
+
+%=====================================================================
+\section{Results}
+
+\subsection{Stage-level times}
+Table~\ref{tab:main} gives the per-stage times of both builds at $1920\times1080$ and $F{=}20$ for every dataset. Fig.~\ref{fig:breakdown} shows the same breakdown graphically at three resolutions: in both builds the blend-and-encode stage is almost the entire bar.
+
+\begin{table*}[t]
+\caption{Stage times (ms), serial (S) versus parallel (P), at $1920\times1080$, $F=20$. Speedup $=$ pipeline S / pipeline P.}
+\label{tab:main}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4.2pt}
+\begin{tabular}{@{}rr rr rr rr rr r@{}}
+\toprule
+ & & \multicolumn{2}{c}{Feature extraction} & \multicolumn{2}{c}{Similarity + order} & \multicolumn{2}{c}{Blend + encode} & \multicolumn{2}{c}{Pipeline total} & \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}
+$N$ & Frames $T$ & S & P & S & P & S & P & S & P & Speedup \\
+\midrule
+\input{figures/table_main.tex}\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/breakdown.pdf}
+\caption{Time breakdown of the serial (ser.) and parallel (par.) builds for $N{=}100$ (a) and $N{=}1000$ (b) at three resolutions, $F{=}20$. Totals are annotated. Feature extraction and similarity/ordering (blue and green) are barely visible next to blend + encode (hatched orange).}
+\label{fig:breakdown}
+\end{figure*}
+
+\subsection{Parallel-stage speedups}
+Fig.~\ref{fig:stagespeedup} shows the speedup of the two parallel CPU stages. Over all 120 configurations, feature extraction is accelerated by $4.3$--$10.0\times$ (mean $5.7\times$) and similarity plus ordering by $4.2$--$8.9\times$ (mean $7.5\times$), using 16 threads. Feature extraction is fastest at the lowest resolution (mean $6.9\times$ at $640{\times}360$, versus $5.1$--$5.5\times$ at the other resolutions; Table~\ref{tab:speedup}). The similarity stage improves with $N$ (mean $5.7\times$ at $N{=}100$, $7.4\times$ at $200$, and $8.0$--$8.4\times$ for $N\ge500$).
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/stage_speedup.pdf}
+\caption{Speedup of the OpenMP stages (serial time divided by parallel time) as a function of dataset size, for each output resolution (means over $F\in\{10,20,30\}$).}
+\label{fig:stagespeedup}
+\end{figure*}
+
+\begin{table}[t]
+\caption{Mean speedup (S/P) by output resolution over all $N$ and $F$ (15 configurations each). ``Enc.\ \%'' is the blend+encode share of the serial pipeline time.}
+\label{tab:speedup}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Resolution & Feat. & Sim.+ord. & Blend+enc. & Total & Enc.\ \% \\
+\midrule
+\input{figures/table_speedup.tex}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{End-to-end results}
+Fig.~\ref{fig:total} (a) plots the pipeline time against the number of frames written, on logarithmic axes: all resolutions follow straight lines of unit slope, and parallel runs lie just below serial runs. Fig.~\ref{fig:total} (b) shows that the end-to-end speedup is between $1.04\times$ and $1.13\times$ (mean $1.11\times$), almost independent of $N$ beyond $N{=}200$ and slightly lower at $640{\times}360$. Across the whole study, the serial runs total $0.99$\,h of pipeline time and the parallel runs $0.88$\,h. The longest single run ($N{=}1000$, $1920{\times}1080$, $F{=}30$, $30{,}970$ frames) took $335$\,s serially and $298$\,s in parallel.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/total_time_speedup.pdf}
+\caption{(a) Pipeline time versus number of frames written (log--log). Filled markers: serial; open markers: parallel. (b) End-to-end speedup versus dataset size (means over $F$). The dashed line is the speedup that would result from accelerating only Stages~1--3 and leaving blend + encode at its serial time.}
+\label{fig:total}
+\end{figure*}
+
+\subsection{Effect of transition length}
+Table~\ref{tab:frames} varies $F$ for $N{=}500$ at $1280\times720$. Pipeline time grows linearly with the number of frames, and the speedup is the same for all three settings.
+
+\begin{table}[t]
+\caption{Effect of the number of intermediate frames $F$ ($N{=}500$, $1280\times720$). S/P: serial/parallel pipeline time.}
+\label{tab:frames}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+$F$ & Frames $T$ & S (ms) & P (ms) & Speedup & P enc.\ ms/frame \\
+\midrule
+\input{figures/table_frames.tex}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=====================================================================
+\section{Analysis}
+
+\subsection{The parallel stages scale, but sub-linearly}
+The OpenMP stages run $5.7\times$ (features) and $7.5\times$ (similarity) faster on 16 threads. Neither approaches the thread count. We do not have profiling data to attribute this precisely; plausible contributors are that the CPU has $6$ performance and $4$ efficiency cores rather than $16$ equal ones (so 16 threads are not 16 full cores), that decoding and resizing are memory-bandwidth-bound, and, for the similarity stage, that the triangular iteration space leaves some imbalance and that the stage is short (4--400\,ms serial) and therefore sensitive to start-up cost at small $N$. The latter is consistent with Fig.~\ref{fig:stagespeedup}(b), where the speedup rises with $N$ and then flattens near $8\times$. Per image, feature extraction costs $0.96$\,ms (serial) versus $0.14$\,ms (parallel) at $640\times360$ and $4.7$\,ms versus $0.92$\,ms at $1920\times1080$; the larger fixed share of JPEG decoding at low resolution (the source images are tiny and identical across settings) is a possible reason for the better scaling there, but we have not isolated it.
+
+\subsection{Encoding dominates, which caps the end-to-end gain}
+Blend and encode takes $91$--$99\%$ of the serial pipeline time (mean $96.9\%$), and $98.8$--$99.7\%$ of the parallel pipeline time (Fig.~\ref{fig:breakdown}; Table~\ref{tab:speedup}). Its cost is proportional to the number of frames (Fig.~\ref{fig:total}a; Table~\ref{tab:frames}) and grows with the frame area: for the parallel build the stage costs $1.3$\,ms per frame at $640{\times}360$, $4.0$ at $1024{\times}768$, $4.7$ at $1280{\times}720$ and $10.4$\,ms at $1920{\times}1080$. By Amdahl's law \cite{amdahl1967}, speeding up a fraction $p$ of the run time by a factor $s$ gives an overall speedup $1/\big((1-p)+p/s\big)$, bounded by $1/(1-p)$. Here Stages~1--3 make up only $p\approx 1$--$9\%$ of the serial time; accelerating them alone would give a speedup of $1.01$--$1.08\times$ (mean $1.03\times$, dashed line in Fig.~\ref{fig:total}b), however fast they became. This is the same structure that Fan \emph{et al.}\ exploit in the opposite direction: they identify the dominant stage of their pipeline and redesign around it \cite{fan2024}; in our pipeline the dominant stage is video encoding, not feature analysis.
+
+\subsection{GPU blending gives a small additional gain}
+The observed mean end-to-end speedup, $1.11\times$, is larger than the $1.03\times$ explained by Stages~1--3, because the blend-and-encode stage itself is $1.08\times$ faster on average ($0.99$--$1.12\times$) when the blend runs on the GPU. At $1920\times1080$ it falls from $11.4$ to $10.4$\,ms per frame, i.e.\ the GPU saves about $1$\,ms per frame net of the $\approx 6$\,MB device-to-host copy that each frame requires. This is an inference from the totals; we did not time blending separately. It shows that the per-pixel blend is cheap even on the CPU compared with encoding a frame, so offloading it cannot change the picture by more than about $10\%$. The GPU gain is smallest at $640\times360$, where the blend work per frame is smallest and the fixed per-frame launch and transfer overheads are largest.
+
+\subsection{Longer transitions are slightly cheaper per frame}
+Table~\ref{tab:frames} shows the encode cost per frame falling from $5.0$ to $4.6$ to $4.3$\,ms as $F$ increases from $10$ to $30$, while total time remains proportional to $T$. Consecutive blended frames differ only slightly, and an inter-frame video codec compresses such frames well, whereas the first frame of each pair is a new image; we did not verify this with codec statistics.
+
+\subsection{Threats to validity}
+Each configuration was run once, so run-to-run variance is not quantified; the smoothness of the curves (Figs.~\ref{fig:stagespeedup} and~\ref{fig:total}) suggests it is small compared with the effects discussed, but the individual stage numbers for the shortest stages should be read with care. All results come from one laptop whose clocks may vary with temperature, and from one codec (\texttt{mp4v}) selected through OpenCV; a hardware encoder or a multi-threaded encoder would change the balance between stages. We did not measure ordering quality or interpolation quality (e.g.\ PSNR), and the cross-dissolve does not model motion, so these results speak to execution time only.
+
+%=====================================================================
+\section{Conclusion and Future Work}
+We implemented a photo-to-video transition pipeline in a serial and an OpenMP/CUDA form and measured both over 120 configurations. The parallel stages achieve $5.7\times$ (feature extraction) and $7.5\times$ (similarity and ordering) mean speedups, yet the whole pipeline is only $1.11\times$ faster on average, because $91$--$99\%$ of the serial time is spent blending and sequentially encoding frames. Further CPU or GPU work on the analysis stages cannot change this; the next gains must come from the encoder side. Directions we consider most promising are: (i) hardware video encoding (e.g.\ NVENC) or a multi-threaded encoder; (ii) overlapping blending with encoding through a producer--consumer queue and CUDA streams, in the spirit of the tile- and stage-level pipelining of Co-ViA \cite{fan2024}; (iii) writing independent video segments in parallel and concatenating them; (iv) a better ordering heuristic (e.g.\ 2-opt improvement), whose quality should be measured; and (v) replacing the cross-dissolve with a learned interpolation such as adaptive separable convolution \cite{niklaus2017}, which would raise the compute per frame and might shift the balance back toward the GPU.
+
+%=====================================================================
+\begin{thebibliography}{99}
+
+\bibitem{snavely2006}
+N.~Snavely, S.~M. Seitz, and R.~Szeliski, ``Photo tourism: Exploring photo collections in 3D,'' \emph{ACM Trans.\ Graphics (Proc.\ SIGGRAPH)}, vol.~25, no.~3, 2006.
+
+\bibitem{niklaus2017}
+S.~Niklaus, L.~Mai, and F.~Liu, ``Video frame interpolation via adaptive separable convolution,'' in \emph{Proc.\ IEEE Int.\ Conf.\ Computer Vision (ICCV)}, 2017, arXiv:1708.01692.
+
+\bibitem{fan2024}
+H.~Fan, Q.~Sun, J.~Wu, W.~Lu, X.~Li, and G.~Yan, ``Co-ViA: A video frame interpolation accelerator exploiting codec information reuse,'' in \emph{Proc.\ 61st ACM/IEEE Design Automation Conf.\ (DAC)}, San Francisco, CA, USA, 2024, doi:10.1145/3649329.3655669.
+
+\bibitem{swain1991}
+M.~J. Swain and D.~H. Ballard, ``Color indexing,'' \emph{Int.\ J.\ Computer Vision}, vol.~7, no.~1, pp.~11--32, 1991.
+
+\bibitem{bradski2000}
+G.~Bradski, ``The OpenCV library,'' \emph{Dr.\ Dobb's Journal of Software Tools}, 2000.
+
+\bibitem{dagum1998}
+L.~Dagum and R.~Menon, ``OpenMP: An industry standard API for shared-memory programming,'' \emph{IEEE Computational Science and Engineering}, vol.~5, no.~1, pp.~46--55, 1998.
+
+\bibitem{nickolls2008}
+J.~Nickolls, I.~Buck, M.~Garland, and K.~Skadron, ``Scalable parallel programming with CUDA,'' \emph{ACM Queue}, vol.~6, no.~2, pp.~40--53, 2008.
+
+\bibitem{amdahl1967}
+G.~M. Amdahl, ``Validity of the single processor approach to achieving large scale computing capabilities,'' in \emph{Proc.\ AFIPS Spring Joint Computer Conf.}, 1967, pp.~483--485.
+
+\bibitem{kaggle_landscape}
+Kaggle user \texttt{utkarshsaxenadn}, ``Landscape Recognition | Image Dataset (12k Images),'' Kaggle. [Online]. Available: \url{https://www.kaggle.com/datasets/utkarshsaxenadn/landscape-recognition-image-dataset-12k-images}
+
+\end{thebibliography}
+
+\end{document}

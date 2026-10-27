@@ -1,0 +1,169 @@
+{
+  "datasets": [
+    {
+      "name": "landscape_100",
+      "path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/data/landscape_100",
+      "output_path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/output/landscape_100.mp4",
+      "widthHeight": [
+        {
+          "width": 640,
+          "height": 360
+        },
+        {
+          "width": 1280,
+          "height": 720
+        },
+        {
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "width": 1024,
+          "height": 768
+        }
+      ],
+      "intermediateFrames": [
+        10,
+        20,
+        30
+      ],
+      "keepVideo": {
+        "width": 1920,
+        "height": 1080,
+        "intermediateFrames": 20
+      }
+    },
+    {
+      "name": "landscape_200",
+      "path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/data/landscape_200",
+      "output_path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/output/landscape_200.mp4",
+      "widthHeight": [
+        {
+          "width": 640,
+          "height": 360
+        },
+        {
+          "width": 1280,
+          "height": 720
+        },
+        {
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "width": 1024,
+          "height": 768
+        }
+      ],
+      "intermediateFrames": [
+        10,
+        20,
+        30
+      ],
+      "keepVideo": {
+        "width": 1920,
+        "height": 1080,
+        "intermediateFrames": 20
+      }
+    },
+    {
+      "name": "landscape_500",
+      "path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/data/landscape_500",
+      "output_path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/output/landscape_500.mp4",
+      "widthHeight": [
+        {
+          "width": 640,
+          "height": 360
+        },
+        {
+          "width": 1280,
+          "height": 720
+        },
+        {
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "width": 1024,
+          "height": 768
+        }
+      ],
+      "intermediateFrames": [
+        10,
+        20,
+        30
+      ],
+      "keepVideo": {
+        "width": 1920,
+        "height": 1080,
+        "intermediateFrames": 20
+      }
+    },
+    {
+      "name": "landscape_750",
+      "path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/data/landscape_750",
+      "output_path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/output/landscape_750.mp4",
+      "widthHeight": [
+        {
+          "width": 640,
+          "height": 360
+        },
+        {
+          "width": 1280,
+          "height": 720
+        },
+        {
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "width": 1024,
+          "height": 768
+        }
+      ],
+      "intermediateFrames": [
+        10,
+        20,
+        30
+      ],
+      "keepVideo": {
+        "width": 1920,
+        "height": 1080,
+        "intermediateFrames": 20
+      }
+    },
+    {
+      "name": "landscape_1000",
+      "path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/data/landscape_1000",
+      "output_path": "/home/archuserbtw/Github Projects/PC_Lab/image_pipeline/output/landscape_1000.mp4",
+      "widthHeight": [
+        {
+          "width": 640,
+          "height": 360
+        },
+        {
+          "width": 1280,
+          "height": 720
+        },
+        {
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "width": 1024,
+          "height": 768
+        }
+      ],
+      "intermediateFrames": [
+        10,
+        20,
+        30
+      ],
+      "keepVideo": {
+        "width": 1920,
+        "height": 1080,
+        "intermediateFrames": 20
+      }
+    }
+  ]
+}
