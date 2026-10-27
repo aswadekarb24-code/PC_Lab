@@ -7,6 +7,8 @@ runs both pipeline_serial and pipeline_parallel for every combination of
 skipped; only a build failure or an unusable config file stops the script.
 
 Usage: python3 run_pipeline.py [--config datasets.json] [--build-dir build] [--skip-build]
+                       [--mode both|serial|parallel] [--segments K]
+                       [--threads T] [--cv-threads M]
 """
 import argparse
 import csv
@@ -65,6 +67,9 @@ class RunResult:
     total_frames: int = None
     error: str = ""
     num_images: int = None
+    segments: int = 1
+    threads: int = 0      # requested OpenMP threads (0 = default); parallel only
+    cv_threads: int = 0   # requested OpenCV pool size (0 = default)
 
     @property
     def pipeline_ms(self):
@@ -213,7 +218,7 @@ def validate_config(config_path: Path):
 
 # ---------------------------------------------------------------- execution
 CSV_FIELDS = ["timestamp", "dataset", "num_images", "mode", "width", "height",
-              "intermediate_frames", "total_frames", "feature_extraction_ms",
+              "intermediate_frames", "segments", "threads", "cv_threads", "total_frames", "feature_extraction_ms",
               "sequencing_ms", "encoding_ms", "pipeline_ms", "wall_s", "status", "error"]
 
 
@@ -222,6 +227,7 @@ def result_row(r: "RunResult") -> dict:
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
         "dataset": r.dataset, "num_images": r.num_images, "mode": r.mode,
         "width": r.width, "height": r.height, "intermediate_frames": r.frames,
+        "segments": r.segments, "threads": r.threads, "cv_threads": r.cv_threads,
         "total_frames": r.total_frames, "feature_extraction_ms": r.feature_ms,
         "sequencing_ms": r.order_ms, "encoding_ms": r.encode_ms,
         "pipeline_ms": round(r.pipeline_ms, 3) if r.pipeline_ms is not None else None, "wall_s": round(r.wall_s, 2),
@@ -265,7 +271,8 @@ def prune_video(ds: Dataset, w: int, h: int, frames: int, mode: str) -> bool:
         return False
 
 
-def run_one(exe: Path, ds: Dataset, w: int, h: int, frames: int, mode: str) -> RunResult:
+def run_one(exe: Path, ds: Dataset, w: int, h: int, frames: int, mode: str, segments: int = 1,
+            threads: int = 0, cv_threads: int = 0) -> RunResult:
     stem = f"{ds.output_path.stem}_{w}x{h}_f{frames}_{mode}"
     out = video_path(ds, w, h, frames, mode)
     metrics = ds.output_path.with_name(stem + ".metrics.json")
@@ -273,6 +280,15 @@ def run_one(exe: Path, ds: Dataset, w: int, h: int, frames: int, mode: str) -> R
     cmd = [str(exe), "--dataset", str(ds.path), "--width", str(w), "--height", str(h),
            "--frames", str(frames), "--output", str(out), "--metrics", str(metrics)]
     res = RunResult(ds.name, w, h, frames, mode, ok=False, num_images=ds.num_images)
+    if mode == "parallel":  # the serial build has no segment / OpenMP-thread support
+        cmd += ["--segments", str(segments)]
+        res.segments = segments
+        if threads:
+            cmd += ["--threads", str(threads)]
+            res.threads = threads
+    if cv_threads:
+        cmd += ["--cv-threads", str(cv_threads)]
+        res.cv_threads = cv_threads
     t0 = time.time()
     try:
         r = subprocess.run(cmd, capture_output=True, text=True)
@@ -315,9 +331,9 @@ def print_summary(results, skipped):
         sm = s.pipeline_ms if s and s.ok else None
         pm = p.pipeline_ms if p and p.ok else None
         speed = f"{sm / pm:.2f}x" if sm and pm else "-"
+        miss = lambda run, v: f"{v:.0f}" if v else ("-" if run is None else "FAILED")
         print(f"{name:<16}{f'{w}x{h}':<11}{f:>6}"
-              f"{(f'{sm:.0f}' if sm else 'FAILED'):>12}"
-              f"{(f'{pm:.0f}' if pm else 'FAILED'):>13}{speed:>9}")
+              f"{miss(s, sm):>12}{miss(p, pm):>13}{speed:>9}")
 
     failed = [r for r in results if not r.ok]
     if failed:
@@ -338,7 +354,20 @@ def main() -> int:
     ap.add_argument("--results-dir", default=str(ROOT / "results"),
                     help="where results_<timestamp>.csv/.jsonl are written")
     ap.add_argument("--skip-build", action="store_true", help="reuse existing executables")
+    ap.add_argument("--mode", choices=("both", "serial", "parallel"), default="both",
+                    help="which pipeline(s) to run (default: both)")
+    ap.add_argument("--segments", type=int, default=1, metavar="K",
+                    help="parallel build only: encode K video segments concurrently (default: 1)")
+    ap.add_argument("--threads", type=int, default=0, metavar="T",
+                    help="parallel build only: OpenMP threads (default: OpenMP default)")
+    ap.add_argument("--cv-threads", type=int, default=0, metavar="M",
+                    help="OpenCV internal thread pool size for both builds (default: OpenCV default; 1 = off)")
     args = ap.parse_args()
+    if args.segments < 1 or args.threads < 0 or args.cv_threads < 0:
+        ap.error("--segments must be >= 1; --threads and --cv-threads must be >= 0")
+    global MODES
+    if args.mode != "both":
+        MODES = (args.mode,)
 
     build_dir = Path(args.build_dir).resolve()
     if not args.skip_build and not build(build_dir):
@@ -379,7 +408,7 @@ def main() -> int:
             for mode in MODES:
                 done += 1
                 print(f"  [run {done}/{total_runs}] {mode:<8} {w}x{h} frames={f} ... ", end="", flush=True)
-                r = run_one(exes[mode], ds, w, h, f, mode)
+                r = run_one(exes[mode], ds, w, h, f, mode, args.segments, args.threads, args.cv_threads)
                 results.append(r)
                 store.add(r)
                 pruned = prune_video(ds, w, h, f, mode)

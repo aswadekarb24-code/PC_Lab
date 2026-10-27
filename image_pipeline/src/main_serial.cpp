@@ -21,6 +21,8 @@ int main(int argc, char** argv) {
     bool showHelp = false;
     if (!parseArgs(argc, argv, opt, showHelp)) return 2;
     if (showHelp) { printUsage(argv[0]); return 0; }
+    opt.threads = 1;  // --threads is ignored by the serial build
+    applyCvThreads(opt);
 
     std::vector<std::string> imagePaths = listImages(opt.datasetPath);
     if (imagePaths.size() < 2) {

@@ -31,3 +31,8 @@ add_executable(pipeline_serial src/main_serial.cpp)
 target_link_libraries(pipeline_serial PRIVATE ${OpenCV_LIBS})
 
 target_include_directories(pipeline_serial PRIVATE src ${OpenCV_INCLUDE_DIRS})
+
+# Encoder scaling benchmark: independent concurrent encodes (OpenCV only, no CUDA)
+add_executable(encode_bench src/encode_bench.cpp)
+target_link_libraries(encode_bench PRIVATE ${OpenCV_LIBS})
+target_include_directories(encode_bench PRIVATE ${OpenCV_INCLUDE_DIRS})

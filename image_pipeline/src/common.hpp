@@ -18,6 +18,9 @@ struct Options {
     int intermediateFrames = 30;
     std::string outputPath = "output_transition_video.mp4";
     std::string metricsPath;  // optional: JSON file with the timings
+    int segments = 1;         // parallel build only: independent video segments encoded concurrently
+    int threads = 0;          // parallel build only: OpenMP threads (0 = OpenMP default / OMP_NUM_THREADS)
+    int cvThreads = 0;        // both builds: OpenCV's internal thread pool (0 = OpenCV default)
 };
 
 inline void printUsage(const char* prog) {
@@ -28,6 +31,11 @@ inline void printUsage(const char* prog) {
               << "  --frames <int>     Intermediate frames per image pair (default: 30)\n"
               << "  --output <path>    Output video path (default: output_transition_video.mp4)\n"
               << "  --metrics <path>   Write timings (ms) as JSON to this file (optional)\n"
+              << "  --segments <int>   Parallel build only: encode this many video segments concurrently\n"
+              << "                     and join them with ffmpeg (default: 1 = single video, no join)\n"
+              << "  --threads <int>    Parallel build only: OpenMP threads (default: OpenMP default)\n"
+              << "  --cv-threads <int> OpenCV's internal thread pool size, both builds (default: OpenCV default;\n"
+              << "                     use 1 to remove OpenCV's own multithreading)\n"
               << "  --help             Show this message\n";
 }
 
@@ -52,7 +60,8 @@ inline bool parseArgs(int argc, char** argv, Options& opt, bool& showHelp) {
         if (a == "--help" || a == "-h") { showHelp = true; return true; }
 
         if (a != "--dataset" && a != "--width" && a != "--height" &&
-            a != "--frames" && a != "--output" && a != "--metrics") {
+            a != "--frames" && a != "--output" && a != "--metrics" && a != "--segments" &&
+            a != "--threads" && a != "--cv-threads") {
             std::cerr << "[ERROR] Unknown or positional argument '" << a << "'. Use --help.\n";
             return false;
         }
@@ -77,6 +86,21 @@ inline bool parseArgs(int argc, char** argv, Options& opt, bool& showHelp) {
                 return false;
             }
             haveH = true;
+        } else if (a == "--threads") {
+            if (!parsePositiveInt(v, 1, opt.threads)) {
+                std::cerr << "[ERROR] --threads must be a positive integer, got '" << v << "'.\n";
+                return false;
+            }
+        } else if (a == "--cv-threads") {
+            if (!parsePositiveInt(v, 1, opt.cvThreads)) {
+                std::cerr << "[ERROR] --cv-threads must be a positive integer, got '" << v << "'.\n";
+                return false;
+            }
+        } else if (a == "--segments") {
+            if (!parsePositiveInt(v, 1, opt.segments)) {
+                std::cerr << "[ERROR] --segments must be a positive integer, got '" << v << "'.\n";
+                return false;
+            }
         } else if (a == "--frames") {
             if (!parsePositiveInt(v, 0, opt.intermediateFrames)) {
                 std::cerr << "[ERROR] --frames must be a non-negative integer, got '" << v << "'.\n";
@@ -89,6 +113,12 @@ inline bool parseArgs(int argc, char** argv, Options& opt, bool& showHelp) {
         return false;
     }
     return true;
+}
+
+// Applies --cv-threads (if given) and records the pool size actually in effect in opt.cvThreads.
+inline void applyCvThreads(Options& opt) {
+    if (opt.cvThreads > 0) cv::setNumThreads(opt.cvThreads);
+    opt.cvThreads = cv::getNumThreads();
 }
 
 // Writes the three stage timings (ms) to opt.metricsPath if one was requested.
@@ -106,6 +136,9 @@ inline bool writeMetrics(const Options& opt, const char* mode, size_t numImages,
       << "  \"width\": " << opt.width << ",\n"
       << "  \"height\": " << opt.height << ",\n"
       << "  \"intermediate_frames\": " << opt.intermediateFrames << ",\n"
+      << "  \"segments\": " << opt.segments << ",\n"
+      << "  \"threads\": " << opt.threads << ",\n"
+      << "  \"cv_threads\": " << opt.cvThreads << ",\n"
       << "  \"total_frames\": " << frames << ",\n"
       << "  \"feature_extraction_ms\": " << featureMs << ",\n"
       << "  \"sequencing_ms\": " << orderMs << ",\n"

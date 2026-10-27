@@ -1,0 +1,208 @@
+============================================================
+ [2/3] Validating configuration
+============================================================
+[INFO] 5 valid dataset(s), 60 runs planned.
+============================================================
+ [3/3] Running pipelines
+============================================================
+[INFO] Saving every run's timings to /home/archuserbtw/Github Projects/PC_Lab/image_pipeline/results/results_20261028_001906.csv
+
+[dataset 1/5] landscape_100: 100 images, 12 settings x 1 modes = 12 runs
+  [run 1/60] serial   640x360 frames=10 ... OK 1.8s | 1680 ms pipeline (features 108, order 4, encode 1569), 1090 frames
+      elapsed 0m02s, ETA 1m48s  (video pruned)
+  [run 2/60] serial   640x360 frames=20 ... OK 3.0s | 2842 ms pipeline (features 111, order 4, encode 2727), 2080 frames
+      elapsed 0m05s, ETA 2m20s  (video pruned)
+  [run 3/60] serial   640x360 frames=30 ... OK 4.1s | 3916 ms pipeline (features 108, order 4, encode 3804), 3070 frames
+      elapsed 0m09s, ETA 2m49s  (video pruned)
+  [run 4/60] serial   1280x720 frames=10 ... OK 6.5s | 6294 ms pipeline (features 354, order 4, encode 5937), 1090 frames
+      elapsed 0m15s, ETA 3m35s  (video pruned)
+  [run 5/60] serial   1280x720 frames=20 ... OK 11.0s | 10834 ms pipeline (features 354, order 4, encode 10476), 2080 frames
+      elapsed 0m26s, ETA 4m50s  (video pruned)
+  [run 6/60] serial   1280x720 frames=30 ... OK 15.2s | 15007 ms pipeline (features 354, order 4, encode 14649), 3070 frames
+      elapsed 0m41s, ETA 6m13s  (video pruned)
+  [run 7/60] serial   1920x1080 frames=10 ... OK 14.3s | 14116 ms pipeline (features 714, order 4, encode 13397), 1090 frames
+      elapsed 0m56s, ETA 7m02s  (video pruned)
+  [run 8/60] serial   1920x1080 frames=20 ... OK 24.6s | 24413 ms pipeline (features 711, order 4, encode 23698), 2080 frames
+      elapsed 1m20s, ETA 8m42s
+  [run 9/60] serial   1920x1080 frames=30 ... OK 35.0s | 34864 ms pipeline (features 716, order 4, encode 34144), 3070 frames
+      elapsed 1m55s, ETA 10m54s  (video pruned)
+  [run 10/60] serial   1024x768 frames=10 ... OK 5.6s | 5440 ms pipeline (features 313, order 4, encode 5123), 1090 frames
+      elapsed 2m01s, ETA 10m05s  (video pruned)
+  [run 11/60] serial   1024x768 frames=20 ... OK 9.5s | 9315 ms pipeline (features 308, order 4, encode 9003), 2080 frames
+      elapsed 2m10s, ETA 9m41s  (video pruned)
+  [run 12/60] serial   1024x768 frames=30 ... OK 13.0s | 12873 ms pipeline (features 306, order 4, encode 12563), 3070 frames
+      elapsed 2m23s, ETA 9m34s  (video pruned)
+
+[dataset 2/5] landscape_200: 200 images, 12 settings x 1 modes = 12 runs
+  [run 13/60] serial   640x360 frames=10 ... OK 3.5s | 3364 ms pipeline (features 215, order 16, encode 3134), 2190 frames
+      elapsed 2m27s, ETA 8m51s  (video pruned)
+  [run 14/60] serial   640x360 frames=20 ... OK 5.9s | 5708 ms pipeline (features 216, order 16, encode 5476), 4180 frames
+      elapsed 2m33s, ETA 8m22s  (video pruned)
+  [run 15/60] serial   640x360 frames=30 ... OK 8.0s | 7874 ms pipeline (features 218, order 16, encode 7640), 6170 frames
+      elapsed 2m41s, ETA 8m03s  (video pruned)
+  [run 16/60] serial   1280x720 frames=10 ... OK 12.8s | 12665 ms pipeline (features 702, order 16, encode 11947), 2190 frames
+      elapsed 2m54s, ETA 7m58s  (video pruned)
+  [run 17/60] serial   1280x720 frames=20 ... OK 22.1s | 21926 ms pipeline (features 698, order 16, encode 21213), 4180 frames
+      elapsed 3m16s, ETA 8m15s  (video pruned)
+  [run 18/60] serial   1280x720 frames=30 ... OK 30.5s | 30321 ms pipeline (features 698, order 16, encode 29608), 6170 frames
+      elapsed 3m46s, ETA 8m48s  (video pruned)
+  [run 19/60] serial   1920x1080 frames=10 ... OK 28.3s | 28111 ms pipeline (features 1419, order 16, encode 26676), 2190 frames
+      elapsed 4m15s, ETA 9m09s  (video pruned)
+  [run 20/60] serial   1920x1080 frames=20 ... OK 48.8s | 48677 ms pipeline (features 1422, order 16, encode 47239), 4180 frames
+      elapsed 5m03s, ETA 10m07s
+  [run 21/60] serial   1920x1080 frames=30 ... OK 67.8s | 67639 ms pipeline (features 1421, order 16, encode 66202), 6170 frames
+      elapsed 6m11s, ETA 11m29s  (video pruned)
+  [run 22/60] serial   1024x768 frames=10 ... OK 11.0s | 10860 ms pipeline (features 612, order 16, encode 10232), 2190 frames
+      elapsed 6m22s, ETA 11m00s  (video pruned)
+  [run 23/60] serial   1024x768 frames=20 ... OK 18.9s | 18763 ms pipeline (features 622, order 16, encode 18126), 4180 frames
+      elapsed 6m41s, ETA 10m45s  (video pruned)
+  [run 24/60] serial   1024x768 frames=30 ... OK 26.1s | 25969 ms pipeline (features 600, order 16, encode 25353), 6170 frames
+      elapsed 7m07s, ETA 10m41s  (video pruned)
+
+[dataset 3/5] landscape_500: 500 images, 12 settings x 1 modes = 12 runs
+  [run 25/60] serial   640x360 frames=10 ... OK 8.6s | 8425 ms pipeline (features 534, order 99, encode 7792), 5490 frames
+      elapsed 7m16s, ETA 10m10s  (video pruned)
+  [run 26/60] serial   640x360 frames=20 ... OK 14.4s | 14284 ms pipeline (features 535, order 99, encode 13650), 10480 frames
+      elapsed 7m30s, ETA 9m49s  (video pruned)
+  [run 27/60] serial   640x360 frames=30 ... OK 19.8s | 19670 ms pipeline (features 540, order 99, encode 19031), 15470 frames
+      elapsed 7m50s, ETA 9m35s  (video pruned)
+  [run 28/60] serial   1280x720 frames=10 ... OK 31.9s | 31755 ms pipeline (features 1754, order 99, encode 29903), 5490 frames
+      elapsed 8m22s, ETA 9m34s  (video pruned)
+  [run 29/60] serial   1280x720 frames=20 ... OK 55.0s | 54827 ms pipeline (features 1832, order 103, encode 52893), 10480 frames
+      elapsed 9m17s, ETA 9m56s  (video pruned)
+  [run 30/60] serial   1280x720 frames=30 ... OK 75.5s | 75277 ms pipeline (features 1735, order 99, encode 73443), 15470 frames
+      elapsed 10m33s, ETA 10m33s  (video pruned)
+  [run 31/60] serial   1920x1080 frames=10 ... OK 70.3s | 70076 ms pipeline (features 3542, order 98, encode 66436), 5490 frames
+      elapsed 11m43s, ETA 10m58s  (video pruned)
+  [run 32/60] serial   1920x1080 frames=20 ... OK 121.9s | 121689 ms pipeline (features 3595, order 102, encode 117992), 10480 frames
+      elapsed 13m45s, ETA 12m02s
+  [run 33/60] serial   1920x1080 frames=30 ... OK 168.3s | 168059 ms pipeline (features 3569, order 99, encode 164391), 15470 frames
+      elapsed 16m33s, ETA 13m33s  (video pruned)
+  [run 34/60] serial   1024x768 frames=10 ... OK 27.3s | 27158 ms pipeline (features 1511, order 99, encode 25549), 5490 frames
+      elapsed 17m00s, ETA 13m00s  (video pruned)
+  [run 35/60] serial   1024x768 frames=20 ... OK 46.9s | 46667 ms pipeline (features 1495, order 98, encode 45073), 10480 frames
+      elapsed 17m47s, ETA 12m42s  (video pruned)
+  [run 36/60] serial   1024x768 frames=30 ... OK 64.9s | 64704 ms pipeline (features 1499, order 99, encode 63106), 15470 frames
+      elapsed 18m52s, ETA 12m35s  (video pruned)
+
+[dataset 4/5] landscape_750: 750 images, 12 settings x 1 modes = 12 runs
+  [run 37/60] serial   640x360 frames=10 ... OK 12.9s | 12753 ms pipeline (features 799, order 223, encode 11731), 8240 frames
+      elapsed 19m05s, ETA 11m52s  (video pruned)
+  [run 38/60] serial   640x360 frames=20 ... OK 21.7s | 21568 ms pipeline (features 803, order 224, encode 20541), 15730 frames
+      elapsed 19m27s, ETA 11m16s  (video pruned)
+  [run 39/60] serial   640x360 frames=30 ... OK 29.8s | 29665 ms pipeline (features 800, order 223, encode 28642), 23220 frames
+      elapsed 19m57s, ETA 10m44s  (video pruned)
+  [run 40/60] serial   1280x720 frames=10 ... OK 47.7s | 47491 ms pipeline (features 2588, order 223, encode 44680), 8240 frames
+      elapsed 20m44s, ETA 10m22s  (video pruned)
+  [run 41/60] serial   1280x720 frames=20 ... OK 82.0s | 81769 ms pipeline (features 2584, order 223, encode 78961), 15730 frames
+      elapsed 22m06s, ETA 10m15s  (video pruned)
+  [run 42/60] serial   1280x720 frames=30 ... OK 113.6s | 113433 ms pipeline (features 2595, order 226, encode 110612), 23220 frames
+      elapsed 24m00s, ETA 10m17s  (video pruned)
+  [run 43/60] serial   1920x1080 frames=10 ... OK 105.8s | 105554 ms pipeline (features 5395, order 223, encode 99937), 8240 frames
+      elapsed 25m46s, ETA 10m11s  (video pruned)
+  [run 44/60] serial   1920x1080 frames=20 ... OK 183.2s | 182916 ms pipeline (features 5389, order 223, encode 177304), 15730 frames
+      elapsed 28m49s, ETA 10m29s
+  [run 45/60] serial   1920x1080 frames=30 ... OK 253.4s | 253233 ms pipeline (features 5386, order 227, encode 247620), 23220 frames
+      elapsed 33m03s, ETA 11m01s  (video pruned)
+  [run 46/60] serial   1024x768 frames=10 ... OK 41.1s | 40845 ms pipeline (features 2234, order 226, encode 38384), 8240 frames
+      elapsed 33m44s, ETA 10m16s  (video pruned)
+  [run 47/60] serial   1024x768 frames=20 ... OK 70.6s | 70358 ms pipeline (features 2235, order 225, encode 67897), 15730 frames
+      elapsed 34m54s, ETA 9m39s  (video pruned)
+  [run 48/60] serial   1024x768 frames=30 ... OK 97.4s | 97207 ms pipeline (features 2231, order 223, encode 94753), 23220 frames
+      elapsed 36m32s, ETA 9m08s  (video pruned)
+
+[dataset 5/5] landscape_1000: 1000 images, 12 settings x 1 modes = 12 runs
+  [run 49/60] serial   640x360 frames=10 ... OK 17.2s | 17057 ms pipeline (features 1065, order 398, encode 15594), 10990 frames
+      elapsed 36m49s, ETA 8m16s  (video pruned)
+  [run 50/60] serial   640x360 frames=20 ... OK 28.9s | 28742 ms pipeline (features 1063, order 398, encode 27281), 20980 frames
+      elapsed 37m18s, ETA 7m28s  (video pruned)
+  [run 51/60] serial   640x360 frames=30 ... OK 39.8s | 39603 ms pipeline (features 1062, order 397, encode 38144), 30970 frames
+      elapsed 37m58s, ETA 6m42s  (video pruned)
+  [run 52/60] serial   1280x720 frames=10 ... OK 63.8s | 63591 ms pipeline (features 3498, order 398, encode 59695), 10990 frames
+      elapsed 39m01s, ETA 6m00s  (video pruned)
+  [run 53/60] serial   1280x720 frames=20 ... OK 109.1s | 108850 ms pipeline (features 3431, order 402, encode 105018), 20980 frames
+      elapsed 40m50s, ETA 5m24s  (video pruned)
+  [run 54/60] serial   1280x720 frames=30 ... OK 152.3s | 152120 ms pipeline (features 3467, order 396, encode 148257), 30970 frames
+      elapsed 43m23s, ETA 4m49s  (video pruned)
+  [run 55/60] serial   1920x1080 frames=10 ... OK 141.1s | 140820 ms pipeline (features 7525, order 398, encode 132897), 10990 frames
+      elapsed 45m44s, ETA 4m09s  (video pruned)
+  [run 56/60] serial   1920x1080 frames=20 ... OK 243.9s | 243663 ms pipeline (features 7265, order 398, encode 235999), 20980 frames
+      elapsed 49m48s, ETA 3m33s
+  [run 57/60] serial   1920x1080 frames=30 ... OK 337.4s | 337155 ms pipeline (features 7298, order 396, encode 329461), 30970 frames
+      elapsed 55m25s, ETA 2m55s  (video pruned)
+  [run 58/60] serial   1024x768 frames=10 ... OK 54.6s | 54369 ms pipeline (features 2998, order 398, encode 50974), 10990 frames
+      elapsed 56m20s, ETA 1m57s  (video pruned)
+  [run 59/60] serial   1024x768 frames=20 ... OK 93.9s | 93717 ms pipeline (features 2982, order 396, encode 90339), 20980 frames
+      elapsed 57m54s, ETA 0m59s  (video pruned)
+  [run 60/60] serial   1024x768 frames=30 ... OK 129.9s | 129626 ms pipeline (features 3017, order 396, encode 126213), 30970 frames
+      elapsed 1h00m04s, ETA 0m00s  (video pruned)
+
+============================================================
+ Summary
+============================================================
+dataset         size       frames   serial ms  parallel ms  speedup
+-------------------------------------------------------------------
+landscape_100   640x360        10        1680            -        -
+landscape_100   640x360        20        2842            -        -
+landscape_100   640x360        30        3916            -        -
+landscape_100   1280x720       10        6294            -        -
+landscape_100   1280x720       20       10834            -        -
+landscape_100   1280x720       30       15007            -        -
+landscape_100   1920x1080      10       14116            -        -
+landscape_100   1920x1080      20       24413            -        -
+landscape_100   1920x1080      30       34864            -        -
+landscape_100   1024x768       10        5440            -        -
+landscape_100   1024x768       20        9315            -        -
+landscape_100   1024x768       30       12873            -        -
+landscape_200   640x360        10        3364            -        -
+landscape_200   640x360        20        5708            -        -
+landscape_200   640x360        30        7874            -        -
+landscape_200   1280x720       10       12665            -        -
+landscape_200   1280x720       20       21926            -        -
+landscape_200   1280x720       30       30321            -        -
+landscape_200   1920x1080      10       28111            -        -
+landscape_200   1920x1080      20       48677            -        -
+landscape_200   1920x1080      30       67639            -        -
+landscape_200   1024x768       10       10860            -        -
+landscape_200   1024x768       20       18763            -        -
+landscape_200   1024x768       30       25969            -        -
+landscape_500   640x360        10        8425            -        -
+landscape_500   640x360        20       14284            -        -
+landscape_500   640x360        30       19670            -        -
+landscape_500   1280x720       10       31755            -        -
+landscape_500   1280x720       20       54827            -        -
+landscape_500   1280x720       30       75277            -        -
+landscape_500   1920x1080      10       70076            -        -
+landscape_500   1920x1080      20      121689            -        -
+landscape_500   1920x1080      30      168059            -        -
+landscape_500   1024x768       10       27158            -        -
+landscape_500   1024x768       20       46667            -        -
+landscape_500   1024x768       30       64704            -        -
+landscape_750   640x360        10       12753            -        -
+landscape_750   640x360        20       21568            -        -
+landscape_750   640x360        30       29665            -        -
+landscape_750   1280x720       10       47491            -        -
+landscape_750   1280x720       20       81769            -        -
+landscape_750   1280x720       30      113433            -        -
+landscape_750   1920x1080      10      105554            -        -
+landscape_750   1920x1080      20      182916            -        -
+landscape_750   1920x1080      30      253233            -        -
+landscape_750   1024x768       10       40845            -        -
+landscape_750   1024x768       20       70358            -        -
+landscape_750   1024x768       30       97207            -        -
+landscape_1000  640x360        10       17057            -        -
+landscape_1000  640x360        20       28742            -        -
+landscape_1000  640x360        30       39603            -        -
+landscape_1000  1280x720       10       63591            -        -
+landscape_1000  1280x720       20      108850            -        -
+landscape_1000  1280x720       30      152120            -        -
+landscape_1000  1920x1080      10      140820            -        -
+landscape_1000  1920x1080      20      243663            -        -
+landscape_1000  1920x1080      30      337155            -        -
+landscape_1000  1024x768       10       54369            -        -
+landscape_1000  1024x768       20       93717            -        -
+landscape_1000  1024x768       30      129626            -        -
+
+Runs: 60 succeeded, 0 failed.
+Results saved to /home/archuserbtw/Github Projects/PC_Lab/image_pipeline/results/results_20261028_001906.csv and /home/archuserbtw/Github Projects/PC_Lab/image_pipeline/results/results_20261028_001906.jsonl
+Total time: 1h00m04s

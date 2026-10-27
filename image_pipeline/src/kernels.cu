@@ -23,13 +23,14 @@ __global__ void blendKernel(const unsigned char* __restrict__ imgA,
     }
 }
 
-// Host wrapper function to launch the CUDA kernel safely
-extern "C" void launchBlendKernel(const unsigned char* d_imgA, const unsigned char* d_imgB,
-                                    unsigned char* d_output, float alpha, int width, int height) {
+// Host wrapper: launches asynchronously on `stream`; the caller synchronises.
+extern "C" cudaError_t launchBlendKernel(const unsigned char* d_imgA, const unsigned char* d_imgB,
+                                         unsigned char* d_output, float alpha, int width, int height,
+                                         cudaStream_t stream) {
     int totalPixels = width * height;
     int threadsPerBlock = 256;
     int blocksPerGrid = (totalPixels + threadsPerBlock - 1) / threadsPerBlock;
 
-    blendKernel<<<blocksPerGrid, threadsPerBlock>>>(d_imgA, d_imgB, d_output, alpha, totalPixels);
-    cudaDeviceSynchronize();
+    blendKernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(d_imgA, d_imgB, d_output, alpha, totalPixels);
+    return cudaGetLastError();
 }
